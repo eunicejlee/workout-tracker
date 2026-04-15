@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1117" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="운동기록" />
+<title>운동 기록</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --bg2:       #181b24;
+    --bg3:       #1f2333;
+    --border:    rgba(255,255,255,0.08);
+    --border2:   rgba(255,255,255,0.15);
+    --text:      #f0f0f0;
+    --text2:     #8b90a0;
+    --text3:     #555a6a;
+    --accent:    #1D9E75;
+    --accent2:   #12704f;
+    --accent-bg: rgba(29,158,117,0.12);
+    --red:       #e25a5a;
+    --amber:     #EF9F27;
+    --amber-bg:  rgba(239,159,39,0.12);
+    --r:         8px;
+    --rl:        14px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: env(safe-area-inset-top, 16px) 20px 14px;
+    padding-top: max(env(safe-area-inset-top), 16px);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .streak-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--amber-bg); color: var(--amber);
+    border-radius: 20px; padding: 4px 10px; font-size: 12px; font-weight: 500;
+  }
+  .streak-pill .fire { font-size: 14px; }
+
+  /* ── tabs ── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 57px;
+    z-index: 9;
+  }
+  .tab {
+    flex: 1; padding: 12px; text-align: center; font-size: 13px;
+    color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  /* ── scroll body ── */
+  .body { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 32px; }
+
+  /* ── calendar ── */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-nav-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-nav-btn:active { background: var(--bg2); }
+  .cal-month { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--text3); padding: 6px 0; font-weight: 500; }
+  .cal-dow:first-child { color: #e25a5a; }
+  .cal-dow:last-child { color: #5a8ee2; }
+
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: var(--r); cursor: pointer; font-size: 14px;
+    color: var(--text2); position: relative; gap: 3px;
+    transition: background 0.1s;
+    border: 1.5px solid transparent;
+  }
+  .cal-day:active { background: var(--bg3); }
+  .cal-day.other { color: var(--text3); }
+  .cal-day.today { color: var(--text); font-weight: 700; }
+  .cal-day.today .day-num::after {
+    content: ''; width: 4px; height: 4px; background: var(--accent);
+    border-radius: 50%; display: block; margin: 0 auto;
+  }
+  .cal-day.has-workout { color: var(--text); }
+  .cal-day.has-workout .dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; }
+  .cal-day.selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .cal-day.selected .dot { background: var(--accent); }
+
+  /* ── stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--rl); padding: 12px 14px;
+  }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+  .stat-val { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+  .stat-unit { font-size: 12px; color: var(--text2); font-weight: 400; }
+
+  /* ── detail view ── */
+  .detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .detail-date { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  .btn-add-ex {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--r); padding: 7px 13px; font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-add-ex:active { opacity: 0.8; }
+
+  .empty {
+    text-align: center; padding: 48px 16px; color: var(--text2);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+  .empty small { font-size: 12px; color: var(--text3); display: block; margin-top: 5px; }
+
+  /* ── exercise block ── */
+  .ex-block {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--rl); margin-bottom: 12px; overflow: hidden;
+  }
+  .ex-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+  .ex-name {
+    flex: 1; background: none; border: none; color: var(--text);
+    font-size: 15px; font-weight: 700; font-family: inherit;
+    outline: none; min-width: 0;
+  }
+  .ex-name::placeholder { color: var(--text3); }
+  .ex-summary { font-size: 11px; color: var(--text2); white-space: nowrap; }
+  .btn-del-ex {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--border2); border-radius: 6px;
+    color: var(--red); cursor: pointer; font-size: 13px;
+  }
+  .btn-del-ex:active { background: rgba(226,90,90,0.1); }
+
+  /* sets table */
+  .sets-head {
+    display: grid; grid-template-columns: 32px 1fr 1fr 32px;
+    padding: 6px 14px; gap: 8px;
+    font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.3px;
+  }
+  .set-row {
+    display: grid; grid-template-columns: 32px 1fr 1fr 32px;
+    align-items: center; padding: 8px 14px; gap: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .set-num { font-size: 12px; color: var(--text3); text-align: center; }
+  .set-input {
+    background: var(--bg); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 8px;
+    color: var(--text); font-size: 15px; font-weight: 700;
+    font-family: inherit; text-align: center; width: 100%;
+    -moz-appearance: textfield;
+  }
+  .set-input::-webkit-inner-spin-button,
+  .set-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .set-input:focus { outline: none; border-color: var(--accent); }
+  .btn-del-set {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px;
+  }
+  .btn-del-set:active { color: var(--red); }
+
+  .btn-add-set {
+    width: 100%; padding: 10px; border: none; background: none;
+    color: var(--accent); font-size: 13px; font-weight: 500;
+    font-family: inherit; cursor: pointer; border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .btn-add-set:active { background: var(--accent-bg); }
+
+  /* ── history tab ── */
+  .history-item {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--rl); padding: 14px 16px; margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .history-item:active { border-color: var(--accent); }
+  .hist-date { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .hist-exercises { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist-tag {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 20px; padding: 3px 10px; font-size: 12px; color: var(--text);
+  }
+  .hist-volume { font-size: 12px; color: var(--text3); margin-top: 8px; }
+  .no-history { text-align: center; padding: 48px 16px; color: var(--text2); font-size: 14px; }
+
+  /* ── bottom safe area ── */
+  .bottom-safe { height: env(safe-area-inset-bottom, 0px); }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="topbar">
+    <div class="topbar-title">💪 운동 기록</div>
+    <div id="streak-area"></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="calendar" onclick="switchTab('calendar')">달력</div>
+    <div class="tab" data-tab="today" onclick="switchTab('today')">오늘</div>
+    <div class="tab" data-tab="history" onclick="switchTab('history')">기록</div>
+  </div>
+  <div class="body" id="body-content"></div>
+  <div class="bottom-safe"></div>
+</div>
+
+<script>
+// ──── State ────
+const STORAGE_KEY = 'workout-log-v2';
+let db = {};
+let selectedDate = todayStr();
+let activeTab = 'calendar';
+let calYear, calMonth;
+
+// ──── Storage ────
+function load() {
+  try { db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { db = {}; }
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+function getDay(ds) {
+  if (!db[ds]) db[ds] = { exercises: [] };
+  return db[ds];
+}
+
+// ──── Helpers ────
+function todayStr() {
+  const d = new Date();
+  return fmt(d);
+}
+function fmt(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateLabel(ds) {
+  const [y,m,d] = ds.split('-');
+  const days = ['일','월','화','수','목','금','토'];
+  const dt = new Date(+y, +m-1, +d);
+  return `${parseInt(m)}월 ${parseInt(d)}일 (${days[dt.getDay()]})`;
+}
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function hasWorkout(ds) {
+  return db[ds] && db[ds].exercises && db[ds].exercises.length > 0;
+}
+function calcStreak() {
+  let streak = 0, d = new Date();
+  while(true) {
+    if (hasWorkout(fmt(d))) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+    if (streak > 365) break;
+  }
+  return streak;
+}
+function totalVol() {
+  let v = 0;
+  Object.values(db).forEach(day => {
+    (day.exercises||[]).forEach(ex => {
+      (ex.sets||[]).forEach(s => { v += (s.weight||0) * (s.reps||0); });
+    });
+  });
+  return v;
+}
+function totalDays() {
+  return Object.keys(db).filter(k => hasWorkout(k)).length;
+}
+function totalSets() {
+  let n = 0;
+  Object.values(db).forEach(day => {
+    (day.exercises||[]).forEach(ex => { n += (ex.sets||[]).length; });
+  });
+  return n;
+}
+function exSummary(ex) {
+  if (!ex.sets || !ex.sets.length) return '';
+  const maxW = Math.max(...ex.sets.map(s=>s.weight||0));
+  const vol = ex.sets.reduce((a,s)=>a+(s.weight||0)*(s.reps||0),0);
+  return `최대 ${maxW}kg · 볼륨 ${vol}kg`;
+}
+
+// ──── Tab switcher ────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  render();
+}
+
+// ──── Render streak ────
+function renderStreak() {
+  const s = calcStreak();
+  document.getElementById('streak-area').innerHTML = s >= 2
+    ? `<div class="streak-pill"><span class="fire">🔥</span>${s}일 연속</div>`
+    : '';
+}
+
+// ──── Calendar ────
+function renderCalendar() {
+  const now = new Date();
+  if (calYear === undefined) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const dows = ['일','월','화','수','목','금','토'];
+  const first = new Date(calYear, calMonth, 1);
+  const last = new Date(calYear, calMonth+1, 0);
+  const td = todayStr();
+
+  let html = `<div class="cal-nav">
+    <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
+    <span class="cal-month">${calYear}년 ${months[calMonth]}</span>
+    <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+  </div>
+  <div class="cal-grid">`;
+  dows.forEach(d => html += `<div class="cal-dow">${d}</div>`);
+
+  const startDow = first.getDay();
+  for (let i = 0; i < startDow; i++) {
+    const pd = new Date(calYear, calMonth, 1 - startDow + i);
+    const ds = fmt(pd);
+    html += dayCell(ds, pd.getDate(), true);
+  }
+  for (let i = 1; i <= last.getDate(); i++) {
+    const pd = new Date(calYear, calMonth, i);
+    const ds = fmt(pd);
+    html += dayCell(ds, i, false);
+  }
+  const endDow = last.getDay();
+  for (let i = 1; i < 7 - endDow; i++) {
+    const nd = new Date(calYear, calMonth+1, i);
+    const ds = fmt(nd);
+    html += dayCell(ds, nd.getDate(), true);
+  }
+  html += '</div>';
+
+  // stats
+  html += `<div class="stats-row">
+    <div class="stat-card"><div class="stat-label">총 운동일</div><div class="stat-val">${totalDays()}<span class="stat-unit"> 일</span></div></div>
+    <div class="stat-card"><div class="stat-label">총 세트</div><div class="stat-val">${totalSets()}<span class="stat-unit"> 세트</span></div></div>
+    <div class="stat-card"><div class="stat-label">총 볼륨</div><div class="stat-val">${fmtVol(totalVol())}</div></div>
+  </div>`;
+
+  return html;
+}
+
+function dayCell(ds, num, other) {
+  const isSel = ds === selectedDate;
+  const isToday = ds === todayStr();
+  const hw = hasWorkout(ds);
+  let cls = 'cal-day';
+  if (other) cls += ' other';
+  if (isToday) cls += ' today';
+  if (hw) cls += ' has-workout';
+  if (isSel) cls += ' selected';
+  const dot = hw ? '<div class="dot"></div>' : '';
+  return `<div class="${cls}" onclick="selectDate('${ds}')"><div class="day-num">${num}</div>${dot}</div>`;
+}
+
+function fmtVol(v) {
+  if (v >= 10000) return `${(v/1000).toFixed(1)}<span class="stat-unit"> t</span>`;
+  return `${v}<span class="stat-unit"> kg</span>`;
+}
+
+// ──── Detail ────
+function renderDetail(ds) {
+  ds = ds || selectedDate;
+  const day = db[ds] || { exercises: [] };
+  let html = `<div class="detail-header">
+    <div class="detail-date">${dateLabel(ds)}</div>
+    <button class="btn-add-ex" onclick="addExercise('${ds}')">+ 운동</button>
+  </div>`;
+
+  if (!day.exercises || !day.exercises.length) {
+    html += `<div class="empty">
+      <div class="empty-icon">🏋️</div>
+      <p>아직 기록된 운동이 없어요</p>
+      <small>위 버튼으로 운동을 추가하세요</small>
+    </div>`;
+    return html;
+  }
+
+  day.exercises.forEach((ex, ei) => {
+    const summ = exSummary(ex);
+    html += `<div class="ex-block">
+      <div class="ex-head">
+        <input class="ex-name" value="${escH(ex.name)}" placeholder="운동 이름"
+          onblur="renameEx('${ds}',${ei},this.value)" />
+        ${summ ? `<span class="ex-summary">${escH(summ)}</span>` : ''}
+        <button class="btn-del-ex" onclick="delEx('${ds}',${ei})">✕</button>
+      </div>
+      <div class="sets-head"><span></span><span>무게(kg)</span><span>횟수</span><span></span></div>`;
+
+    (ex.sets || []).forEach((s, si) => {
+      html += `<div class="set-row">
+        <div class="set-num">${si+1}</div>
+        <input class="set-input" type="number" inputmode="decimal" value="${s.weight}"
+          onblur="updSet('${ds}',${ei},${si},'weight',+this.value)" />
+        <input class="set-input" type="number" inputmode="numeric" value="${s.reps}"
+          onblur="updSet('${ds}',${ei},${si},'reps',+this.value)" />
+        <button class="btn-del-set" onclick="delSet('${ds}',${ei},${si})">×</button>
+      </div>`;
+    });
+
+    html += `<button class="btn-add-set" onclick="addSet('${ds}',${ei})">+ 세트 추가</button>
+    </div>`;
+  });
+  return html;
+}
+
+// ──── History ────
+function renderHistory() {
+  const keys = Object.keys(db)
+    .filter(k => hasWorkout(k))
+    .sort((a,b) => b.localeCompare(a));
+  if (!keys.length) return `<div class="no-history">아직 운동 기록이 없어요 💪</div>`;
+  return keys.map(ds => {
+    const day = db[ds];
+    const exNames = (day.exercises||[]).map(ex => `<div class="hist-tag">${escH(ex.name)}</div>`).join('');
+    const vol = (day.exercises||[]).reduce((a,ex)=>a+(ex.sets||[]).reduce((b,s)=>b+(s.weight||0)*(s.reps||0),0),0);
+    const sets = (day.exercises||[]).reduce((a,ex)=>a+(ex.sets||[]).length,0);
+    return `<div class="history-item" onclick="goToDate('${ds}')">
+      <div class="hist-date">${dateLabel(ds)}</div>
+      <div class="hist-exercises">${exNames}</div>
+      <div class="hist-volume">${sets}세트 · 볼륨 ${vol}kg</div>
+    </div>`;
+  }).join('');
+}
+
+// ──── Main render ────
+function render() {
+  renderStreak();
+  const el = document.getElementById('body-content');
+  if (activeTab === 'calendar') {
+    el.innerHTML = renderCalendar();
+  } else if (activeTab === 'today') {
+    el.innerHTML = renderDetail(selectedDate);
+  } else {
+    el.innerHTML = renderHistory();
+  }
+}
+
+// ──── Actions ────
+window.prevMonth = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} render(); };
+window.nextMonth = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} render(); };
+
+window.selectDate = (ds) => {
+  selectedDate = ds;
+  switchTab('today');
+};
+window.goToDate = (ds) => {
+  selectedDate = ds;
+  const [y,m] = ds.split('-');
+  calYear = +y; calMonth = +m-1;
+  switchTab('today');
+};
+
+window.addExercise = (ds) => {
+  const day = getDay(ds);
+  day.exercises.push({ name: '새 운동', sets: [{ weight: 0, reps: 10 }] });
+  save(); render();
+};
+window.delEx = (ds, ei) => {
+  if (!confirm('이 운동을 삭제할까요?')) return;
+  const day = getDay(ds);
+  day.exercises.splice(ei, 1);
+  save(); render();
+};
+window.renameEx = (ds, ei, val) => {
+  const day = getDay(ds);
+  if (day.exercises[ei]) { day.exercises[ei].name = val; save(); }
+};
+window.addSet = (ds, ei) => {
+  const day = getDay(ds);
+  const ex = day.exercises[ei];
+  const last = ex.sets[ex.sets.length-1] || { weight: 0, reps: 10 };
+  ex.sets.push({ weight: last.weight, reps: last.reps });
+  save(); render();
+};
+window.delSet = (ds, ei, si) => {
+  const day = getDay(ds);
+  day.exercises[ei].sets.splice(si, 1);
+  save(); render();
+};
+window.updSet = (ds, ei, si, field, val) => {
+  const day = getDay(ds);
+  if (day.exercises[ei] && day.exercises[ei].sets[si]) {
+    day.exercises[ei].sets[si][field] = isNaN(val) ? 0 : val;
+    save();
+  }
+};
+
+// ──── Init ────
+load();
+render();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
