@@ -261,7 +261,7 @@ function renderDetail(ds){
   html+=`<div class="preset-section"><div class="preset-label">빠른 추가</div><div class="preset-grid">`;
   PRESETS[activeCat].forEach(p=>{
     const used=usedNames.has(p.name);
-    html+=`<button class="preset-btn ${activeCat}${used?' used':''}" onclick="addPreset('${ds}','${escH(p.name)}','${p.icon}','${activeCat}')">${p.icon} ${escH(p.name)}</button>`;
+    html+=`<button class="preset-btn ${activeCat}${used?' used':''}" onclick="addPreset('${ds}','${escH(p.name)}','${p.icon}','${activeCat}')">${escH(p.name)}</button>`;
   });
   html+=`</div><button class="btn-add-custom" onclick="addCustom('${ds}','${activeCat}')">＋ 직접 입력</button></div>`;
 
